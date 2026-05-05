@@ -358,7 +358,7 @@ function renderResults() {
           <div class="card-title"><span class="icon">📸</span> AI Detection</div>
           <span style="font-size:11px;color:var(--text-muted);">via Gemini Vision</span>
         </div>
-        <div class="snapshot-preview" style="max-height:180px;overflow:hidden;border-radius:8px;margin-bottom:12px;"><img src="${detImg}" alt="Detected" style="width:100%;object-fit:cover;" /></div>
+        <div class="snapshot-preview" style="border-radius:8px;margin-bottom:12px;"><img src="${detImg}" alt="Detected" style="width:100%;border-radius:8px;" /></div>
         <div class="detection-grid">
           <div class="detection-item"><div class="detection-label">Hand</div><div class="detection-value">${heroDetHTML || 'N/A'}</div></div>
           <div class="detection-item"><div class="detection-label">Board</div><div class="detection-value">${boardDetHTML || 'None'}</div></div>
