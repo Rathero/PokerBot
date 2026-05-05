@@ -134,7 +134,7 @@ Return ONLY the JSON, no markdown, no explanation.`;
             { inline_data: { mime_type: mimeType, data: base64Data } }
           ]
         }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 1000 }
+        generationConfig: { temperature: 0.1, maxOutputTokens: 1000, responseMimeType: 'application/json' }
       })
     });
 
@@ -146,13 +146,26 @@ Return ONLY the JSON, no markdown, no explanation.`;
     const data = await response.json();
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    // Parse JSON from response (strip markdown fences if present)
-    const jsonStr = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-    try {
-      return JSON.parse(jsonStr);
-    } catch {
-      throw new Error('Could not parse AI response as JSON');
+    // Robust JSON extraction
+    return extractJSON(content);
+  }
+
+  function extractJSON(text) {
+    // Try direct parse first
+    try { return JSON.parse(text); } catch {}
+
+    // Strip markdown fences
+    let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+    try { return JSON.parse(cleaned); } catch {}
+
+    // Extract first JSON object from text
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start !== -1 && end > start) {
+      try { return JSON.parse(cleaned.substring(start, end + 1)); } catch {}
     }
+
+    throw new Error('Could not parse AI response as JSON. Raw: ' + text.substring(0, 200));
   }
 
   // ---- Apply Results to Calculator ----

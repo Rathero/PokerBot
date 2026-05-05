@@ -656,7 +656,7 @@ function handleScreenshotUpload(event) {
               { inline_data: { mime_type: mimeType, data: base64Data } }
             ]
           }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 1000 }
+          generationConfig: { temperature: 0.1, maxOutputTokens: 1000, responseMimeType: 'application/json' }
         })
       });
 
@@ -667,8 +667,14 @@ function handleScreenshotUpload(event) {
 
       const data = await response.json();
       const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const jsonStr = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-      const result = JSON.parse(jsonStr);
+      // Robust JSON extraction
+      let result;
+      try { result = JSON.parse(content); } catch {
+        const cleaned = content.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+        const s = cleaned.indexOf('{'), e = cleaned.lastIndexOf('}');
+        if (s !== -1 && e > s) result = JSON.parse(cleaned.substring(s, e + 1));
+        else throw new Error('Could not parse AI response');
+      }
 
       CameraAnalyzer.lastResult = result;
       // Reuse the render from CameraAnalyzer
