@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Poker Training Suite — Practice and study poker with equity calculations, hand analysis, and scenario training.">
+  <title>Poker Training Suite — Equity Calculator & Hand Analyzer</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
+</head>
+<body>
+
+<div class="bg-animation">
+  <div class="orb"></div>
+  <div class="orb"></div>
+  <div class="orb"></div>
+</div>
+
+<div class="app-container">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-logo">
+      <div class="logo-icon">♠</div>
+      <div>
+        <h1>Poker Training Suite</h1>
+        <span>Equity · Analysis · Strategy</span>
+      </div>
+    </div>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="calculator">🧮 Calculator</button>
+      <button class="nav-tab" data-tab="camera">📷 Camera AI</button>
+      <button class="nav-tab" data-tab="analyzer">📊 Hand Analyzer</button>
+      <button class="nav-tab" data-tab="scenarios">🎯 Scenarios</button>
+    </nav>
+  </header>
+
+  <!-- ==================== CALCULATOR PANEL ==================== -->
+  <div id="panel-calculator" class="panel active">
+    <div class="grid-2">
+
+      <!-- Left Column: Card Selection -->
+      <div>
+        <!-- Hero Cards -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><span class="icon">🂠</span> Your Hand</div>
+              <div class="card-subtitle">Select your 2 hole cards</div>
+            </div>
+            <span id="phase-indicator" style="font-size:13px;color:var(--text-secondary);font-weight:600;">🃏 Pre-flop</span>
+          </div>
+          <div id="hero-cards-display" class="selected-cards"></div>
+        </div>
+
+        <!-- Board Cards -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><span class="icon">📋</span> Community Cards</div>
+              <div class="card-subtitle">Add flop, turn, and river cards</div>
+            </div>
+            <button class="btn btn-sm btn-danger" onclick="clearAllCards()">Clear All</button>
+          </div>
+          <div id="board-cards-display" class="selected-cards"></div>
+        </div>
+
+        <!-- Card Picker -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">🎴</span> Card Picker</div>
+          </div>
+          <div id="suit-filters" class="suit-filters"></div>
+          <div id="card-grid"></div>
+        </div>
+      </div>
+
+      <!-- Right Column: Settings & Results -->
+      <div>
+        <!-- Game Settings -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">⚙️</span> Table Settings</div>
+          </div>
+
+          <div class="input-group">
+            <label>Position</label>
+            <div id="position-selector" class="position-selector"></div>
+          </div>
+
+          <div class="input-row">
+            <div class="input-group">
+              <label>Opponents</label>
+              <select id="num-opponents" class="input-field">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Your Stack ($)</label>
+              <input type="number" id="hero-stack" class="input-field" value="1000" min="0" step="50">
+            </div>
+          </div>
+
+          <div class="input-row">
+            <div class="input-group">
+              <label>Pot Size ($)</label>
+              <input type="number" id="pot-size" class="input-field" value="100" min="0" step="10">
+            </div>
+            <div class="input-group">
+              <label>Call Amount ($)</label>
+              <input type="number" id="call-amount" class="input-field" value="50" min="0" step="5">
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" onclick="calculateEquity()" style="margin-top:8px;">
+            ⚡ Calculate Equity
+          </button>
+        </div>
+
+        <!-- Results -->
+        <div id="results-container" class="results-section">
+          <div class="empty-state">
+            <div class="empty-icon">🎴</div>
+            <p>Select your 2 hole cards to begin analysis</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CAMERA AI PANEL ==================== -->
+  <div id="panel-camera" class="panel">
+    <div class="grid-2">
+      <!-- Left: Camera Feed -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><span class="icon">📷</span> Live Camera</div>
+              <div class="card-subtitle">Point your camera at a poker table</div>
+            </div>
+            <div id="analysis-status"><span style="color:var(--text-muted)">● Ready</span></div>
+          </div>
+
+          <div class="camera-container">
+            <video id="camera-video" autoplay playsinline muted></video>
+            <div id="camera-placeholder" class="camera-placeholder">
+              <div class="camera-placeholder-icon">📷</div>
+              <p>Camera not started</p>
+              <p style="font-size:12px;margin-top:4px;">Click "Start Camera" below</p>
+            </div>
+          </div>
+
+          <div class="camera-controls">
+            <button id="btn-start-camera" class="btn btn-primary" onclick="toggleCamera()">
+              📷 Start Camera
+            </button>
+            <button class="btn btn-secondary" onclick="CameraAnalyzer.analyzeCurrentFrame()" id="btn-capture">
+              🔍 Analyze Frame
+            </button>
+            <button class="btn btn-secondary" onclick="toggleAutoAnalysis()" id="btn-auto">
+              🔄 Auto: OFF
+            </button>
+          </div>
+
+          <!-- Upload alternative -->
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+            <label style="font-size:12px;color:var(--text-secondary);text-transform:uppercase;font-weight:500;display:block;margin-bottom:8px;">Or upload a screenshot</label>
+            <input type="file" id="screenshot-upload" accept="image/*" onchange="handleScreenshotUpload(event)" class="input-field" style="padding:8px;">
+          </div>
+        </div>
+
+        <!-- API Key Config -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">🔑</span> API Key</div>
+          </div>
+          <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">Enter your Google Gemini API key for vision analysis. Get one free at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com</a>. Stored locally in your browser.</p>
+          <div style="display:flex;gap:8px;">
+            <input type="password" id="api-key-input" class="input-field" placeholder="AIza..." style="flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;">
+            <button class="btn btn-primary btn-sm" onclick="saveApiKey()">Save</button>
+          </div>
+          <div id="api-key-status" style="font-size:11px;margin-top:6px;"></div>
+        </div>
+      </div>
+
+      <!-- Right: Results -->
+      <div id="camera-results">
+        <div class="empty-state">
+          <div class="empty-icon">🎥</div>
+          <p>Start the camera or upload a screenshot to analyze a poker table</p>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">The AI will detect cards, pot size, stacks, and more</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ANALYZER PANEL ==================== -->
+  <div id="panel-analyzer" class="panel">
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">📝</span> Hand History</div>
+          </div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+            Paste your PartyPoker hand history below. The analyzer will extract all the key information and provide insights.
+          </p>
+          <textarea id="hand-history-text" class="hand-history-input" placeholder="Paste your hand history here...
+
+Example:
+***** Hand History for Game 1234567890 *****
+$1/$2 USD NL Texas Hold'em
+Seat 1: Player1 ($200)
+Seat 2: Hero ($185)
+Dealt to Hero [Ah Kd]
+Player1: raises $6
+Hero: calls $6
+*** FLOP *** [Ks 9h 4c]
+Player1: bets $12
+Hero: raises $30
+..."></textarea>
+          <button class="btn btn-primary btn-block" onclick="analyzeHandHistory()" style="margin-top:12px;">
+            📊 Analyze Hand
+          </button>
+        </div>
+      </div>
+      <div id="hh-results">
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <p>Paste a hand history and click Analyze to get insights</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SCENARIOS PANEL ==================== -->
+  <div id="panel-scenarios" class="panel">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">🎯</span> Practice Scenarios</div>
+        <div class="card-subtitle">Click a scenario to load it into the calculator</div>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
+        Study common poker scenarios. Each one loads pre-set cards and settings so you can analyze the optimal play.
+      </p>
+      <div class="grid-3">
+        <div class="card" style="cursor:pointer;text-align:center;" onclick="loadScenario('premium'); document.querySelector('[data-tab=calculator]').click();">
+          <div style="font-size:32px;margin-bottom:8px;">🔥</div>
+          <div style="font-weight:600;margin-bottom:4px;">Premium Hand</div>
+          <div style="font-size:12px;color:var(--text-secondary);">A♥ K♥ preflop</div>
+        </div>
+        <div class="card" style="cursor:pointer;text-align:center;" onclick="loadScenario('overpair'); document.querySelector('[data-tab=calculator]').click();">
+          <div style="font-size:32px;margin-bottom:8px;">👑</div>
+          <div style="font-weight:600;margin-bottom:4px;">Overpair</div>
+          <div style="font-size:12px;color:var(--text-secondary);">QQ on 9-7-3 board</div>
+        </div>
+        <div class="card" style="cursor:pointer;text-align:center;" onclick="loadScenario('flush-draw'); document.querySelector('[data-tab=calculator]').click();">
+          <div style="font-size:32px;margin-bottom:8px;">💎</div>
+          <div style="font-weight:600;margin-bottom:4px;">Flush Draw</div>
+          <div style="font-size:12px;color:var(--text-secondary);">K♥ J♥ on ♥♥ board</div>
+        </div>
+        <div class="card" style="cursor:pointer;text-align:center;" onclick="loadScenario('set'); document.querySelector('[data-tab=calculator]').click();">
+          <div style="font-size:32px;margin-bottom:8px;">🎰</div>
+          <div style="font-weight:600;margin-bottom:4px;">Flopped Set</div>
+          <div style="font-size:12px;color:var(--text-secondary);">88 on K-8-3 board</div>
+        </div>
+        <div class="card" style="cursor:pointer;text-align:center;" onclick="loadScenario('gutshot'); document.querySelector('[data-tab=calculator]').click();">
+          <div style="font-size:32px;margin-bottom:8px;">🎲</div>
+          <div style="font-weight:600;margin-bottom:4px;">Straight Draw</div>
+          <div style="font-size:12px;color:var(--text-secondary);">JT on 9-7-2 board</div>
+        </div>
+        <div class="card" style="cursor:pointer;text-align:center;" onclick="loadScenario('marginal'); document.querySelector('[data-tab=calculator]').click();">
+          <div style="font-size:32px;margin-bottom:8px;">🤔</div>
+          <div style="font-weight:600;margin-bottom:4px;">Marginal Spot</div>
+          <div style="font-size:12px;color:var(--text-secondary);">A5s on K-9-4-2 turn</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Strategy Tips -->
+    <div class="card" style="margin-top:20px;">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📚</span> Quick Strategy Guide</div>
+      </div>
+      <div class="grid-2" style="gap:16px;">
+        <div style="padding:16px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border);">
+          <h3 style="font-size:14px;color:var(--green);margin-bottom:8px;">✅ When to Call</h3>
+          <ul style="font-size:13px;color:var(--text-secondary);list-style:none;line-height:1.8;">
+            <li>• Your equity ≥ pot odds</li>
+            <li>• Good implied odds (deep stacks)</li>
+            <li>• Strong draws with position</li>
+          </ul>
+        </div>
+        <div style="padding:16px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border);">
+          <h3 style="font-size:14px;color:var(--green);margin-bottom:8px;">📈 When to Raise</h3>
+          <ul style="font-size:13px;color:var(--text-secondary);list-style:none;line-height:1.8;">
+            <li>• Equity significantly above pot odds</li>
+            <li>• Value with strong made hands</li>
+            <li>• Semi-bluff with draws + fold equity</li>
+          </ul>
+        </div>
+        <div style="padding:16px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border);">
+          <h3 style="font-size:14px;color:var(--red);margin-bottom:8px;">❌ When to Fold</h3>
+          <ul style="font-size:13px;color:var(--text-secondary);list-style:none;line-height:1.8;">
+            <li>• Equity well below pot odds</li>
+            <li>• No draw potential</li>
+            <li>• Facing aggression with weak hand</li>
+          </ul>
+        </div>
+        <div style="padding:16px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border);">
+          <h3 style="font-size:14px;color:var(--accent);margin-bottom:8px;">🧠 Key Concepts</h3>
+          <ul style="font-size:13px;color:var(--text-secondary);list-style:none;line-height:1.8;">
+            <li>• Position is power (BTN > CO > MP > UTG)</li>
+            <li>• Pot odds = call / (pot + call)</li>
+            <li>• Rule of 2&4: outs × 2 (turn), outs × 4 (flop)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/poker-engine.js"></script>
+<script src="js/camera-analyzer.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
