@@ -84,6 +84,9 @@ const CameraAnalyzer = (() => {
       isAnalyzing = false;
       updateAnalysisStatus('done');
       renderAnalysisResult(result, imageData);
+      // Auto-apply results and switch to calculator
+      CameraAnalyzer.lastImage = imageData;
+      applyToCalculator(result);
       return result;
     } catch (err) {
       isAnalyzing = false;
@@ -369,6 +372,7 @@ Return ONLY the JSON, no markdown, no explanation.`;
     startAutoAnalysis, stopAutoAnalysis,
     setApiKey, getApiKey,
     lastResult: null,
+    lastImage: null,
     get isAnalyzing() { return isAnalyzing; },
     get isAutoMode() { return autoMode; },
     get isStreaming() { return !!stream; }

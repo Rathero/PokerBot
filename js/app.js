@@ -14,7 +14,8 @@ const state = {
   heroStack: 1000,
   suitFilter: 'all',
   results: null,
-  isCalculating: false
+  isCalculating: false,
+  lastDetection: null
 };
 
 // ---- Initialization ----
@@ -337,6 +338,42 @@ function renderResults() {
   const r = state.results;
   const equityColor = r.equity.equity > 60 ? 'var(--green)' : r.equity.equity > 40 ? 'var(--yellow)' : 'var(--red)';
 
+  // Detection summary from camera/screenshot analysis
+  let detectionHTML = '';
+  const det = CameraAnalyzer.lastResult;
+  const detImg = CameraAnalyzer.lastImage;
+  if (det && detImg) {
+    const heroDetHTML = (det.hero_cards || []).map(c => `<span class="detected-card">${c || '?'}</span>`).join(' ');
+    const boardDetHTML = (det.board_cards || []).map(c => `<span class="detected-card">${c || '?'}</span>`).join(' ');
+    const playersDetHTML = (det.players || []).map(p => `
+      <div class="player-row">
+        <span class="player-name">${p.name || '?'}</span>
+        <span class="player-pos">${p.position || '?'}</span>
+        <span class="player-stack">$${p.stack ?? '?'}</span>
+        <span class="player-status ${p.status === 'active' ? 'active' : 'folded'}">${p.status || '?'}</span>
+      </div>`).join('');
+    detectionHTML = `
+      <div class="card analysis-result-card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📸</span> AI Detection</div>
+          <span style="font-size:11px;color:var(--text-muted);">via Gemini Vision</span>
+        </div>
+        <div class="snapshot-preview" style="max-height:180px;overflow:hidden;border-radius:8px;margin-bottom:12px;"><img src="${detImg}" alt="Detected" style="width:100%;object-fit:cover;" /></div>
+        <div class="detection-grid">
+          <div class="detection-item"><div class="detection-label">Hand</div><div class="detection-value">${heroDetHTML || 'N/A'}</div></div>
+          <div class="detection-item"><div class="detection-label">Board</div><div class="detection-value">${boardDetHTML || 'None'}</div></div>
+          <div class="detection-item"><div class="detection-label">Pot</div><div class="detection-value highlight">$${det.pot_size ?? '?'}</div></div>
+          <div class="detection-item"><div class="detection-label">Call</div><div class="detection-value highlight">$${det.call_amount ?? '?'}</div></div>
+          <div class="detection-item"><div class="detection-label">Stack</div><div class="detection-value">$${det.hero_stack ?? '?'}</div></div>
+          <div class="detection-item"><div class="detection-label">Phase</div><div class="detection-value">${det.phase || '?'}</div></div>
+          <div class="detection-item"><div class="detection-label">Blinds</div><div class="detection-value">${det.blinds || '?'}</div></div>
+          <div class="detection-item"><div class="detection-label">Players</div><div class="detection-value">${det.active_players ?? '?'} / ${det.num_players ?? '?'}</div></div>
+        </div>
+        ${playersDetHTML ? `<div style="margin-top:12px;"><div class="detection-label" style="margin-bottom:6px;">Player Info</div><div class="players-list">${playersDetHTML}</div></div>` : ''}
+        ${det.notes ? `<div class="ai-notes"><span class="icon">💡</span> ${det.notes}</div>` : ''}
+      </div>`;
+  }
+
   let outsHTML = '';
   if (r.outs && r.outs.outs > 0) {
     outsHTML = `
@@ -360,6 +397,7 @@ function renderResults() {
   const equityClass = r.equity.equity > r.potOdds ? 'positive' : 'negative';
 
   container.innerHTML = `
+    ${detectionHTML}
     <div class="hand-strength">
       <div class="hand-name">${r.handStrength.name}</div>
       <div class="hand-desc">${r.handStrength.description}</div>
@@ -677,41 +715,9 @@ function handleScreenshotUpload(event) {
       }
 
       CameraAnalyzer.lastResult = result;
-      // Reuse the render from CameraAnalyzer
-      const resultsContainer = document.getElementById('camera-results');
-      if (resultsContainer) {
-        const playersHTML = (result.players || []).map(p => `
-          <div class="player-row">
-            <span class="player-name">${p.name || '?'}</span>
-            <span class="player-pos">${p.position || '?'}</span>
-            <span class="player-stack">$${p.stack ?? '?'}</span>
-            <span class="player-status ${p.status === 'active' ? 'active' : 'folded'}">${p.status || '?'}</span>
-          </div>`).join('');
-
-        const heroHTML = (result.hero_cards || []).map(c => `<span class="detected-card">${c || '?'}</span>`).join(' ');
-        const boardHTML = (result.board_cards || []).map(c => `<span class="detected-card">${c || '?'}</span>`).join(' ');
-
-        resultsContainer.innerHTML = `
-          <div class="card analysis-result-card">
-            <div class="card-header">
-              <div class="card-title"><span class="icon">🔍</span> Detection Results</div>
-              <button class="btn btn-primary btn-sm" onclick="CameraAnalyzer.applyToCalculator(CameraAnalyzer.lastResult)">⚡ Apply & Calculate</button>
-            </div>
-            <div class="snapshot-preview"><img src="${imageData}" alt="Analyzed screenshot" /></div>
-            <div class="detection-grid">
-              <div class="detection-item"><div class="detection-label">Your Hand</div><div class="detection-value">${heroHTML || 'N/A'}</div></div>
-              <div class="detection-item"><div class="detection-label">Board</div><div class="detection-value">${boardHTML || 'No board'}</div></div>
-              <div class="detection-item"><div class="detection-label">Pot</div><div class="detection-value highlight">$${result.pot_size ?? '?'}</div></div>
-              <div class="detection-item"><div class="detection-label">To Call</div><div class="detection-value highlight">$${result.call_amount ?? '?'}</div></div>
-              <div class="detection-item"><div class="detection-label">Stack</div><div class="detection-value">$${result.hero_stack ?? '?'}</div></div>
-              <div class="detection-item"><div class="detection-label">Phase</div><div class="detection-value">${result.phase || '?'}</div></div>
-              <div class="detection-item"><div class="detection-label">Blinds</div><div class="detection-value">${result.blinds || '?'}</div></div>
-              <div class="detection-item"><div class="detection-label">Players</div><div class="detection-value">${result.active_players ?? '?'} / ${result.num_players ?? '?'}</div></div>
-            </div>
-            ${playersHTML ? `<div style="margin-top:16px;"><div class="detection-label" style="margin-bottom:8px;">Player Info</div><div class="players-list">${playersHTML}</div></div>` : ''}
-            ${result.notes ? `<div class="ai-notes"><span class="icon">💡</span> ${result.notes}</div>` : ''}
-          </div>`;
-      }
+      CameraAnalyzer.lastImage = imageData;
+      // Auto-apply results and switch to calculator
+      CameraAnalyzer.applyToCalculator(result);
     } catch (err) {
       if (container) {
         container.innerHTML = `<div class="card" style="border-color:rgba(239,68,68,0.3);"><div style="text-align:center;padding:20px;"><div style="font-size:32px;margin-bottom:12px;">⚠️</div><p style="color:var(--red);font-weight:500;">${err.message}</p></div></div>`;
