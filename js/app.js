@@ -656,7 +656,7 @@ function handleScreenshotUpload(event) {
               { inline_data: { mime_type: mimeType, data: base64Data } }
             ]
           }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 1000, responseMimeType: 'application/json' }
+          generationConfig: { temperature: 0.1, maxOutputTokens: 4096, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
         })
       });
 
