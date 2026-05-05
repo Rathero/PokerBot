@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session sessioncode="5849775430">
+<general>
+<client_version>25.9.1.14</client_version>
+<mode>real</mode>
+<gametype>Omaha PL €0.01/€0.02</gametype>
+<tablename>Sea Lake, 560237915</tablename>
+<tablecurrency>EUR</tablecurrency>
+<currency>EUR</currency>
+<nickname>Rathero12</nickname>
+<gamecount>2</gamecount>
+<startdate>05-05-2026 20:16:33</startdate>
+<bets>€0.07</bets>
+<wins>€0.08</wins>
+<tablesize>6</tablesize>
+</general>
+<game gamecode="8935196148"><general>
+<startdate>05-05-2026 20:17:36</startdate>
+<players><player seat="6" name="MEUHMEUH974" chips="€2.26" dealer="0" win="€0" bet="€0" muck="1" cashout="0" cashout_fee="€0.00" rakeamount="€0.00"/>
+<player seat="1" name="cecuabinglobal" chips="€1.58" dealer="1" win="€0" bet="€0" muck="1" cashout="0" cashout_fee="€0.00" rakeamount="€0.00"/>
+<player seat="3" name="44557" chips="€1.01" dealer="0" win="€0" bet="€0.02" muck="1" cashout="0" cashout_fee="€0.00" rakeamount="€0.00"/>
+<player seat="5" name="Rathero12" chips="€2" dealer="0" win="€0.04" bet="€0.06" muck="1" cashout="0" cashout_fee="€0.00" rakeamount="€0.00"/>
+</players>
+</general>
+<round no="0"><action no="1" player="44557" type="1" discard="1" dealt="1" sum="€0.01"/>
+<action no="2" player="Rathero12" type="2" sum="€0.02"/>
+</round>
+<round no="1"><cards type="Pocket" player="44557">X X X X</cards>
+<cards type="Pocket" player="Rathero12">H2 SA S7 S2</cards>
+<cards type="Pocket" player="MEUHMEUH974">X X X X</cards>
+<cards type="Pocket" player="cecuabinglobal">X X X X</cards>
+<action no="3" player="MEUHMEUH974" type="0" discard="1" dealt="1" sum="€0"/>
+<action no="4" player="cecuabinglobal" type="0" discard="1" dealt="1" sum="€0"/>
+<action no="5" player="44557" type="3" discard="1" dealt="1" sum="€0.01"/>
+<action no="6" player="Rathero12" type="4" sum="€0"/>
+</round>
+<round no="2"><cards type="Flop">D3 C4 C6</cards>
+<action no="7" player="44557" type="4" discard="1" dealt="1" sum="€0"/>
+<action no="8" player="Rathero12" type="5" sum="€0.04"/>
+<action no="9" player="44557" type="0" discard="1" dealt="1" sum="€0"/>
+</round>
+</game>
+<game gamecode="8935200283"><general>
+<startdate>05-05-2026 20:19:01</startdate>
+<players><player seat="10" name="Pableras6" chips="€1.10" dealer="0" win="€0.05" bet="€0.06" muck="1" cashout="0" cashout_fee="€0.00" rakeamount="€0.00"/>
+<player seat="1" name="cecuabinglobal" chips="€1.58" dealer="0" win="€0" bet="€0" muck="1" cashout="0" cashout_fee="€0.00" rakeamount="€0.00"/>
+<player seat="3" name="44557" chips="€0.99" dealer="1" win="€0" bet="€0" muck="1" cashout="0" cashout_fee="€0.00" rakeamount="€0.00"/>
+<player seat="5" name="Rathero12" chips="€2.02" dealer="0" win="€0" bet="€0.01" muck="1" cashout="0" cashout_fee="€0.00" rakeamount="€0.00"/>
+<player seat="6" name="MEUHMEUH974" chips="€2.26" dealer="0" win="€0" bet="€0.02" muck="1" cashout="0" cashout_fee="€0.00" rakeamount="€0.00"/>
+</players>
+</general>
+<round no="0"><action no="1" player="Rathero12" type="1" sum="€0.01"/>
+<action no="2" player="MEUHMEUH974" type="2" discard="1" dealt="1" sum="€0.02"/>
+<action no="3" player="Pableras6" type="2" discard="1" dealt="1" sum="€0.02"/>
+</round>
+<round no="1"><cards type="Pocket" player="44557">X X X X</cards>
+<cards type="Pocket" player="Pableras6">X X X X</cards>
+<cards type="Pocket" player="MEUHMEUH974">X X X X</cards>
+<cards type="Pocket" player="Rathero12">H3 D3 C10 C4</cards>
+<cards type="Pocket" player="cecuabinglobal">X X X X</cards>
+<action no="4" player="Pableras6" type="23" discard="1" dealt="1" sum="€0.06"/>
+<action no="5" player="cecuabinglobal" type="0" discard="1" dealt="1" sum="€0"/>
+<action no="6" player="44557" type="0" discard="1" dealt="1" sum="€0"/>
+<action no="7" player="Rathero12" type="0" sum="€0"/>
+<action no="8" player="MEUHMEUH974" type="0" discard="1" dealt="1" sum="€0"/>
+</round>
+</game>
+</session>

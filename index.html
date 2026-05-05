@@ -204,41 +204,100 @@
 
   <!-- ==================== ANALYZER PANEL ==================== -->
   <div id="panel-analyzer" class="panel">
-    <div class="grid-2">
-      <div>
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><span class="icon">📝</span> Hand History</div>
-          </div>
-          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
-            Paste your PartyPoker hand history below. The analyzer will extract all the key information and provide insights.
-          </p>
-          <textarea id="hand-history-text" class="hand-history-input" placeholder="Paste your hand history here...
 
-Example:
-***** Hand History for Game 1234567890 *****
-$1/$2 USD NL Texas Hold'em
-Seat 1: Player1 ($200)
-Seat 2: Hero ($185)
-Dealt to Hero [Ah Kd]
-Player1: raises $6
-Hero: calls $6
-*** FLOP *** [Ks 9h 4c]
-Player1: bets $12
-Hero: raises $30
-..."></textarea>
-          <button class="btn btn-primary btn-block" onclick="analyzeHandHistory()" style="margin-top:12px;">
-            📊 Analyze Hand
-          </button>
+    <!-- XML File Import Section -->
+    <div class="card" id="xml-import-section">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><span class="icon">📂</span> Import Hand History</div>
+          <div class="card-subtitle">Upload PartyPoker XML export files to analyze your sessions</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="xml-file-count" class="xml-badge" style="display:none;"></span>
+          <button class="btn btn-danger btn-sm" id="btn-clear-sessions" onclick="clearXMLSessions()" style="display:none;">🗑 Clear All</button>
         </div>
       </div>
-      <div id="hh-results">
-        <div class="empty-state">
-          <div class="empty-icon">📊</div>
-          <p>Paste a hand history and click Analyze to get insights</p>
+      <div class="xml-drop-zone" id="xml-drop-zone">
+        <div class="drop-zone-content">
+          <div class="drop-zone-icon">📄</div>
+          <p class="drop-zone-text">Drop your <strong>.xml</strong> files here or click to browse</p>
+          <p class="drop-zone-hint">Supports multiple PartyPoker export files</p>
+        </div>
+        <input type="file" id="xml-file-input" accept=".xml" multiple style="display:none;">
+      </div>
+    </div>
+
+    <!-- Session Stats Dashboard (hidden until files loaded) -->
+    <div id="session-dashboard" style="display:none;">
+      <div class="grid-4 stats-grid" id="stats-cards"></div>
+
+      <!-- Secondary Stats -->
+      <div class="card" id="advanced-stats-card" style="display:none;">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📈</span> Player Stats</div>
+        </div>
+        <div class="grid-4" id="advanced-stats"></div>
+      </div>
+
+      <!-- Profit Chart -->
+      <div class="card" id="profit-chart-card" style="display:none;">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📊</span> Profit Over Time</div>
+          <div id="profit-total" style="font-family:'JetBrains Mono';font-weight:700;font-size:16px;"></div>
+        </div>
+        <div class="profit-chart-container">
+          <canvas id="profit-chart" height="160"></canvas>
         </div>
       </div>
     </div>
+
+    <!-- Hand List -->
+    <div class="card" id="hand-list-card" style="display:none;">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><span class="icon">🃏</span> Hand History</div>
+          <div class="card-subtitle" id="hand-list-subtitle">Browse all parsed hands</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="hand-filter" class="input-field" style="width:auto;padding:6px 12px;font-size:12px;" onchange="filterHands()">
+            <option value="all">All Hands</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost</option>
+            <option value="showdown">Showdown</option>
+            <option value="big-pot">Big Pots</option>
+          </select>
+        </div>
+      </div>
+      <div id="hand-list" class="hand-list"></div>
+    </div>
+
+    <!-- Hand Detail View (shown when a hand is selected) -->
+    <div class="card" id="hand-detail-card" style="display:none;">
+      <div class="card-header">
+        <div>
+          <div class="card-title"><span class="icon">🔍</span> Hand Detail</div>
+          <div class="card-subtitle" id="hand-detail-subtitle"></div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="closeHandDetail()">← Back to List</button>
+      </div>
+      <div id="hand-detail-content"></div>
+    </div>
+
+    <!-- Legacy Text Paste Section (collapsed) -->
+    <details class="card legacy-paste-section">
+      <summary style="cursor:pointer;font-weight:600;color:var(--text-secondary);font-size:13px;">
+        📝 Paste hand history text (legacy format)
+      </summary>
+      <div style="margin-top:16px;">
+        <textarea id="hand-history-text" class="hand-history-input" placeholder="Paste your hand history text here..."></textarea>
+        <button class="btn btn-primary btn-block" onclick="analyzeHandHistory()" style="margin-top:12px;">
+          📊 Analyze Hand
+        </button>
+      </div>
+    </details>
+
+    <!-- Legacy results -->
+    <div id="hh-results" style="display:none;"></div>
   </div>
 
   <!-- ==================== SCENARIOS PANEL ==================== -->
@@ -329,6 +388,7 @@ Hero: raises $30
 
 </div>
 
+<script src="js/xml-parser.js"></script>
 <script src="js/poker-engine.js"></script>
 <script src="js/camera-analyzer.js"></script>
 <script src="js/app.js"></script>

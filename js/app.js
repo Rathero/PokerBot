@@ -750,6 +750,392 @@ function initApiKeyDisplay() {
   }
 }
 
+// ============================================================
+// XML Hand History Analyzer
+// ============================================================
+
+const xmlState = {
+  parsedData: null,    // { sessions, hands, stats, errors }
+  filteredHands: [],
+  selectedHandIndex: -1
+};
+
+// ---- File Upload & Drop Zone ----
+document.addEventListener('DOMContentLoaded', () => {
+  const dropZone = document.getElementById('xml-drop-zone');
+  const fileInput = document.getElementById('xml-file-input');
+  if (!dropZone || !fileInput) return;
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    handleXMLFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', e => handleXMLFiles(e.target.files));
+});
+
+async function handleXMLFiles(files) {
+  if (!files || files.length === 0) return;
+  const xmlStrings = [];
+  for (const file of files) {
+    if (!file.name.endsWith('.xml')) continue;
+    xmlStrings.push(await file.text());
+  }
+  if (xmlStrings.length === 0) return;
+
+  try {
+    xmlState.parsedData = XMLHandParser.parseMultipleFiles(xmlStrings);
+    xmlState.filteredHands = [...xmlState.parsedData.hands];
+    xmlState.selectedHandIndex = -1;
+
+    // Update UI
+    const badge = document.getElementById('xml-file-count');
+    const clearBtn = document.getElementById('btn-clear-sessions');
+    badge.textContent = `${xmlState.parsedData.hands.length} hands · ${xmlState.parsedData.sessions.length} session(s)`;
+    badge.style.display = 'inline-block';
+    clearBtn.style.display = 'inline-flex';
+
+    renderSessionDashboard();
+    renderHandList();
+  } catch (err) {
+    console.error('XML parse error:', err);
+    alert('Error parsing XML: ' + err.message);
+  }
+}
+
+function clearXMLSessions() {
+  xmlState.parsedData = null;
+  xmlState.filteredHands = [];
+  xmlState.selectedHandIndex = -1;
+  document.getElementById('xml-file-count').style.display = 'none';
+  document.getElementById('btn-clear-sessions').style.display = 'none';
+  document.getElementById('session-dashboard').style.display = 'none';
+  document.getElementById('hand-list-card').style.display = 'none';
+  document.getElementById('hand-detail-card').style.display = 'none';
+  const fileInput = document.getElementById('xml-file-input');
+  if (fileInput) fileInput.value = '';
+}
+
+// ---- Session Dashboard ----
+function renderSessionDashboard() {
+  const data = xmlState.parsedData;
+  if (!data) return;
+  const s = data.stats;
+  const currency = data.sessions[0]?.currency || 'EUR';
+  const sym = currency === 'EUR' ? '€' : '$';
+
+  document.getElementById('session-dashboard').style.display = 'block';
+
+  // Main stat cards
+  const profitClass = data.sessions.reduce((a, ss) => a + ss.netProfit, 0) >= 0 ? 'positive' : 'negative';
+  const netProfit = data.sessions.reduce((a, ss) => a + ss.netProfit, 0);
+
+  document.getElementById('stats-cards').innerHTML = `
+    <div class="stat-card ${profitClass}">
+      <div class="stat-card-label">Net Profit</div>
+      <div class="stat-card-value">${netProfit >= 0 ? '+' : ''}${sym}${Math.abs(netProfit).toFixed(2)}</div>
+      <div class="stat-card-sub">${s.handsWon}W / ${s.handsPlayed - s.handsWon}L</div>
+    </div>
+    <div class="stat-card neutral">
+      <div class="stat-card-label">Hands Played</div>
+      <div class="stat-card-value">${s.handsPlayed}</div>
+      <div class="stat-card-sub">${s.winRate.toFixed(1)}% win rate</div>
+    </div>
+    <div class="stat-card ${s.biggestWin > 0 ? 'positive' : 'neutral'}">
+      <div class="stat-card-label">Biggest Win</div>
+      <div class="stat-card-value">+${sym}${s.biggestWin.toFixed(2)}</div>
+    </div>
+    <div class="stat-card ${s.biggestLoss < 0 ? 'negative' : 'neutral'}">
+      <div class="stat-card-label">Biggest Loss</div>
+      <div class="stat-card-value">${sym}${Math.abs(s.biggestLoss).toFixed(2)}</div>
+    </div>
+  `;
+
+  // Advanced stats
+  const advCard = document.getElementById('advanced-stats-card');
+  advCard.style.display = 'block';
+  document.getElementById('advanced-stats').innerHTML = `
+    <div class="adv-stat-item"><div class="adv-stat-value">${s.vpip.toFixed(1)}%</div><div class="adv-stat-label">VPIP</div></div>
+    <div class="adv-stat-item"><div class="adv-stat-value">${s.pfr.toFixed(1)}%</div><div class="adv-stat-label">PFR</div></div>
+    <div class="adv-stat-item"><div class="adv-stat-value">${s.wtsdPct.toFixed(1)}%</div><div class="adv-stat-label">WTSD</div></div>
+    <div class="adv-stat-item"><div class="adv-stat-value">${s.wsdPct.toFixed(1)}%</div><div class="adv-stat-label">W$SD</div></div>
+  `;
+
+  // Profit chart
+  renderProfitChart(data.hands, sym);
+}
+
+function renderProfitChart(hands, sym) {
+  const chartCard = document.getElementById('profit-chart-card');
+  const canvas = document.getElementById('profit-chart');
+  const totalEl = document.getElementById('profit-total');
+  if (!canvas || hands.length === 0) return;
+
+  chartCard.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  // Calculate cumulative profit
+  let cumulative = 0;
+  const points = hands.map(h => {
+    cumulative += (h.heroResult?.profit || 0);
+    return cumulative;
+  });
+
+  const total = points[points.length - 1];
+  totalEl.textContent = `${total >= 0 ? '+' : ''}${sym}${Math.abs(total).toFixed(2)}`;
+  totalEl.style.color = total >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Set canvas size
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 160 * dpr;
+  canvas.style.height = '160px';
+  ctx.scale(dpr, dpr);
+  const w = rect.width, h = 160;
+
+  ctx.clearRect(0, 0, w, h);
+
+  const minY = Math.min(0, ...points);
+  const maxY = Math.max(0, ...points);
+  const range = (maxY - minY) || 1;
+  const padding = { top: 16, bottom: 20, left: 8, right: 8 };
+  const chartW = w - padding.left - padding.right;
+  const chartH = h - padding.top - padding.bottom;
+
+  const toX = i => padding.left + (i / (points.length - 1 || 1)) * chartW;
+  const toY = v => padding.top + (1 - (v - minY) / range) * chartH;
+
+  // Zero line
+  const zeroY = toY(0);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(padding.left, zeroY);
+  ctx.lineTo(w - padding.right, zeroY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, padding.top, 0, h - padding.bottom);
+  if (total >= 0) {
+    grad.addColorStop(0, 'rgba(34,197,94,0.25)');
+    grad.addColorStop(1, 'rgba(34,197,94,0)');
+  } else {
+    grad.addColorStop(0, 'rgba(239,68,68,0)');
+    grad.addColorStop(1, 'rgba(239,68,68,0.25)');
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(toX(0), zeroY);
+  points.forEach((v, i) => ctx.lineTo(toX(i), toY(v)));
+  ctx.lineTo(toX(points.length - 1), zeroY);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  points.forEach((v, i) => {
+    if (i === 0) ctx.moveTo(toX(i), toY(v));
+    else ctx.lineTo(toX(i), toY(v));
+  });
+  ctx.strokeStyle = total >= 0 ? '#22c55e' : '#ef4444';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // End dot
+  const lastX = toX(points.length - 1);
+  const lastY = toY(points[points.length - 1]);
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+  ctx.fillStyle = total >= 0 ? '#22c55e' : '#ef4444';
+  ctx.fill();
+}
+
+// ---- Hand List ----
+function renderHandList() {
+  if (!xmlState.parsedData) return;
+  const container = document.getElementById('hand-list');
+  const card = document.getElementById('hand-list-card');
+  const subtitle = document.getElementById('hand-list-subtitle');
+  card.style.display = 'block';
+  document.getElementById('hand-detail-card').style.display = 'none';
+
+  const hands = xmlState.filteredHands;
+  subtitle.textContent = `Showing ${hands.length} of ${xmlState.parsedData.hands.length} hands`;
+
+  container.innerHTML = hands.map((hand, i) => {
+    const profit = hand.heroResult?.profit || 0;
+    const profitClass = profit > 0 ? 'win' : profit < 0 ? 'loss' : 'neutral';
+    const sym = hand.currency === 'EUR' ? '€' : '$';
+    const profitStr = profit >= 0 ? `+${sym}${profit.toFixed(2)}` : `-${sym}${Math.abs(profit).toFixed(2)}`;
+
+    const cardsHTML = hand.heroCards.length > 0
+      ? hand.heroCards.map(c => `<div class="hand-item-card ${c.suitClass}"><span>${XMLHandParser.RANK_DISPLAY[c.rank] || c.rank}</span><span>${XMLHandParser.SUIT_NAMES[c.suit]}</span></div>`).join('')
+      : '<div class="hand-item-card unknown">?</div><div class="hand-item-card unknown">?</div>';
+
+    const boardStr = hand.board.length > 0 ? hand.board.map(c => c.display).join(' ') : 'No board';
+
+    return `
+      <div class="hand-item" onclick="showHandDetail(${i})">
+        <div class="hand-item-num">#${i + 1}</div>
+        <div class="hand-item-cards">${cardsHTML}</div>
+        <div class="hand-item-info">
+          <div class="hand-item-type">${hand.gameType || 'Cash Game'}</div>
+          <div class="hand-item-meta">${hand.date} · ${boardStr}</div>
+        </div>
+        <div class="hand-item-street">${hand.lastStreet}</div>
+        <div class="hand-item-result ${profitClass}">${profitStr}</div>
+      </div>`;
+  }).join('');
+}
+
+function filterHands() {
+  if (!xmlState.parsedData) return;
+  const filter = document.getElementById('hand-filter').value;
+  const all = xmlState.parsedData.hands;
+
+  switch (filter) {
+    case 'won':
+      xmlState.filteredHands = all.filter(h => (h.heroResult?.profit || 0) > 0);
+      break;
+    case 'lost':
+      xmlState.filteredHands = all.filter(h => (h.heroResult?.profit || 0) < 0);
+      break;
+    case 'showdown':
+      xmlState.filteredHands = all.filter(h => h.heroResult?.wentToShowdown);
+      break;
+    case 'big-pot':
+      const avg = all.reduce((s, h) => s + h.pot, 0) / all.length;
+      xmlState.filteredHands = all.filter(h => h.pot > avg * 2);
+      break;
+    default:
+      xmlState.filteredHands = [...all];
+  }
+  renderHandList();
+}
+
+// ---- Hand Detail View ----
+function showHandDetail(index) {
+  const hand = xmlState.filteredHands[index];
+  if (!hand) return;
+  xmlState.selectedHandIndex = index;
+
+  document.getElementById('hand-list-card').style.display = 'none';
+  const detailCard = document.getElementById('hand-detail-card');
+  detailCard.style.display = 'block';
+  document.getElementById('hand-detail-subtitle').textContent = `Hand #${hand.id} · ${hand.date}`;
+
+  const sym = hand.currency === 'EUR' ? '€' : '$';
+  const profit = hand.heroResult?.profit || 0;
+  const bannerClass = profit > 0 ? 'win' : profit < 0 ? 'loss' : 'neutral';
+  const profitStr = profit >= 0 ? `+${sym}${profit.toFixed(2)}` : `-${sym}${Math.abs(profit).toFixed(2)}`;
+
+  // Hero cards
+  const heroCardsHTML = hand.heroCards.map(c =>
+    `<div class="detail-card ${c.suitClass}"><span class="rank">${XMLHandParser.RANK_DISPLAY[c.rank] || c.rank}</span><span class="suit">${XMLHandParser.SUIT_NAMES[c.suit]}</span></div>`
+  ).join('');
+
+  // Board cards
+  const boardHTML = hand.board.map(c =>
+    `<div class="detail-card ${c.suitClass}"><span class="rank">${XMLHandParser.RANK_DISPLAY[c.rank] || c.rank}</span><span class="suit">${XMLHandParser.SUIT_NAMES[c.suit]}</span></div>`
+  ).join('');
+
+  // Players table
+  const playersHTML = hand.players.map(p => {
+    const isHero = p.name === hand.heroName;
+    const pProfit = p.win - p.bet;
+    const pClass = pProfit > 0 ? 'style="color:var(--green)"' : pProfit < 0 ? 'style="color:var(--red)"' : '';
+    return `<tr class="${isHero ? 'hero-row' : ''}">
+      <td>${p.name}${isHero ? ' <small style="color:var(--accent)">(You)</small>' : ''}</td>
+      <td>${p.isDealer ? '<span class="dealer-badge">D</span>' : ''}</td>
+      <td style="font-family:'JetBrains Mono';font-weight:600">${sym}${p.chips.toFixed(2)}</td>
+      <td style="font-family:'JetBrains Mono'" ${pClass}>${pProfit >= 0 ? '+' : ''}${sym}${pProfit.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  // Action timeline
+  let timelineHTML = '';
+  hand.rounds.forEach(round => {
+    let roundCardsHTML = '';
+    if (round.no === '2' && hand.boardCards.flop.length > 0) {
+      roundCardsHTML = hand.boardCards.flop.map(c => `<span class="mini-card ${c.suitClass}">${c.display}</span>`).join('');
+    } else if (round.no === '3' && hand.boardCards.turn) {
+      roundCardsHTML = `<span class="mini-card ${hand.boardCards.turn.suitClass}">${hand.boardCards.turn.display}</span>`;
+    } else if (round.no === '4' && hand.boardCards.river) {
+      roundCardsHTML = `<span class="mini-card ${hand.boardCards.river.suitClass}">${hand.boardCards.river.display}</span>`;
+    }
+
+    timelineHTML += `<div class="action-round-header">${round.name}${roundCardsHTML ? `<div class="round-cards">${roundCardsHTML}</div>` : ''}</div>`;
+
+    round.actions.forEach(a => {
+      const actionClass = a.type.includes('blind') ? 'blind' : a.type;
+      const isBlind = a.type === 'small blind' || a.type === 'big blind';
+      timelineHTML += `
+        <div class="action-entry ${a.isHero ? 'hero-action' : ''}">
+          <span class="action-player">${a.player}</span>
+          <span class="action-type ${isBlind ? 'blind' : actionClass}">${a.type}</span>
+          ${a.amount > 0 ? `<span class="action-amount">${sym}${a.amount.toFixed(2)}</span>` : '<span class="action-amount"></span>'}
+        </div>`;
+    });
+  });
+
+  // Winners
+  const winnersHTML = hand.winners.map(w =>
+    `<span style="color:var(--green);font-weight:600">${w.name}</span> won <span style="font-family:'JetBrains Mono';font-weight:700;color:var(--gold)">${sym}${w.win.toFixed(2)}</span>`
+  ).join(' · ');
+
+  document.getElementById('hand-detail-content').innerHTML = `
+    <div class="result-banner ${bannerClass}">
+      <span class="result-label">${profit > 0 ? '🏆 You won' : profit < 0 ? '❌ You lost' : '➖ Break even'}</span>
+      <span class="result-amount">${profitStr}</span>
+    </div>
+
+    <div class="hand-detail-section">
+      <div class="hand-detail-section-title">Your Hand</div>
+      <div class="hand-detail-cards">${heroCardsHTML || '<span style="color:var(--text-muted)">No cards visible</span>'}</div>
+    </div>
+
+    ${hand.board.length > 0 ? `
+      <div class="hand-detail-section">
+        <div class="hand-detail-section-title">Board</div>
+        <div class="hand-detail-cards">${boardHTML}</div>
+      </div>` : ''}
+
+    <div class="hand-detail-section">
+      <div class="hand-detail-section-title">Players</div>
+      <table class="players-table">
+        <thead><tr><th>Player</th><th></th><th>Stack</th><th>Result</th></tr></thead>
+        <tbody>${playersHTML}</tbody>
+      </table>
+    </div>
+
+    <div class="hand-detail-section">
+      <div class="hand-detail-section-title">Action Timeline</div>
+      <div class="action-timeline">${timelineHTML}</div>
+    </div>
+
+    ${winnersHTML ? `
+      <div style="padding:12px 16px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border);margin-top:8px;">
+        <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">Result: </span>${winnersHTML}
+      </div>` : ''}
+  `;
+
+  // Scroll to top of detail
+  detailCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeHandDetail() {
+  document.getElementById('hand-detail-card').style.display = 'none';
+  document.getElementById('hand-list-card').style.display = 'block';
+}
+
 // Make functions globally accessible
 window.removeHeroCard = removeHeroCard;
 window.removeBoardCard = removeBoardCard;
@@ -761,6 +1147,11 @@ window.toggleCamera = toggleCamera;
 window.toggleAutoAnalysis = toggleAutoAnalysis;
 window.handleScreenshotUpload = handleScreenshotUpload;
 window.saveApiKey = saveApiKey;
+window.handleXMLFiles = handleXMLFiles;
+window.clearXMLSessions = clearXMLSessions;
+window.filterHands = filterHands;
+window.showHandDetail = showHandDetail;
+window.closeHandDetail = closeHandDetail;
 
 // Init API key display on load
 document.addEventListener('DOMContentLoaded', initApiKeyDisplay);
